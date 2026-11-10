@@ -25,7 +25,7 @@ NAME = os.environ.get("CENTER_NAME", "Center")
 def about():
     """What this Center is and which schemas it serves. No token needed: an app calls
     this first to know it is talking to a Center, and which of its features will work."""
-    return {"center": NAME, "version": VERSION, "api": 1,
+    return {"center": NAME, "app": None, "version": VERSION, "api": 1,
             "schemas": {s.name: {"version": s.version, "description": s.description} for s in ALL}}
 
 

@@ -7,7 +7,7 @@ For a schema named `things` with model `Thing`:
 | `GET /v1/things?since=<seq>&limit=` | changes after `since`, tombstones included, oldest first, and the `cursor` to send next time. `since=0` is everything |
 | `GET /v1/things/<id>` | one record |
 | `POST /v1/things` | add one; Center gives it an id (or merges it into the record with the same natural key, see `key`) |
-| `PUT /v1/things/<id>` | add or replace one by the app's own id. `updated_at` in the body is when the app made the change; an older change than the stored one is ignored (last write wins) |
+| `PUT /v1/things/<id>` | add or replace one by the app's own id (a new id with the natural key of a record already here updates that record; the response has its id). `updated_at` in the body is when the app made the change; an older change than the stored one is ignored (last write wins) |
 | `DELETE /v1/things/<id>` | delete (keeps a tombstone so the delete syncs) |
 
 `<schema>:read` covers the GETs, `<schema>:write` the rest.
@@ -104,6 +104,11 @@ def _router(s: Schema) -> APIRouter:
 
     @r.put("/{rid}", response_model=Record[M])
     def replace(rid: str, body: Write[M], _=Depends(write)):
+        # A new id for something already here under another id (the same natural key)
+        # updates that record, so two apps that each made "Abby" leave one correction.
+        # The response's id says which record it was.
+        if store.get(s.name, rid) is None and (existing := same_key(body.data)) is not None:
+            rid = existing["id"]
         rec, changed = store.put(s.name, rid, body.data.model_dump(), body.updated_at)
         if changed:
             _publish(s.name, rec)

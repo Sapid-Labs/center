@@ -105,3 +105,11 @@ def test_events_announce_each_change(client, token):
     client.post("/v1/corrections", json={"data": {"original": "a", "correction": "b"}}, headers=h)
     t.join(5)
     assert got and got[0]["schema"] == "corrections" and got[0]["deleted"] is False
+
+
+def test_a_put_with_a_new_id_for_a_known_phrase_updates_the_known_one(client, token):
+    h = token("corrections:write")
+    a = client.post("/v1/corrections", json={"data": {"original": "Abby", "correction": "Abi"}}, headers=h).json()
+    b = client.put("/v1/corrections/clibbits-1", json={"data": {"original": "abby", "correction": "Abbie"}}, headers=h).json()
+    assert b["id"] == a["id"] and b["data"]["correction"] == "Abbie"
+    assert len(client.get("/v1/corrections", headers=h).json()["items"]) == 1
