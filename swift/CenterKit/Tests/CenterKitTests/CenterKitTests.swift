@@ -112,4 +112,23 @@ final class CenterKitTests: XCTestCase {
     XCTAssertEqual(page.items[0].data?.correction, "Chonky")
     XCTAssertEqual(page.cursor, 7)
   }
+
+  @MainActor
+  func testOverTheNetworkAnAppPairsAndWrites() async throws {
+    let (n, store) = node()
+    n.start()
+    for _ in 0..<50 where n.port == nil { try await Task.sleep(nanoseconds: 100_000_000) }
+    let port = try XCTUnwrap(n.port)
+    var client = CenterClient(base: "http://127.0.0.1:\(port)")
+    let about = try await client.about()
+    XCTAssertEqual(about.app, "Herald")
+    XCTAssertTrue(about.serves("corrections"))
+    let pairing = try await client.pair(app: "Clibbits", scopes: ["corrections:write"])
+    client.token = try await client.pairing(pairing.pairingId).token
+    try await client.put("corrections", id: "x1", CorrectionData(original: "Abby", correction: "Abi"))
+    XCTAssertEqual(store.rows["x1"]?.data["correction"] as? String, "Abi")
+    let page: CenterPage<CorrectionData> = try await client.changes("corrections", since: 0)
+    XCTAssertEqual(page.items.first?.data?.original, "Abby")
+    n.stop()
+  }
 }
