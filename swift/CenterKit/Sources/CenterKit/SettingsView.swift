@@ -26,15 +26,18 @@ public struct CenterSettingsSections: View {
     } header: {
       Text("Center server")
     } footer: {
-      Text("Optional. A Center server you run shares data between all your apps and devices.")
+      Text("Optional. A Center server you run shares data between all your apps and devices. While one is set, your apps share through it alone.")
         .font(.caption).foregroundStyle(.secondary)
     }
     Section {
-      if network.apps.isEmpty {
+      if network.usesCenter {
+        Text("Your apps share through your Center server, so these direct connections aren't used.")
+          .foregroundStyle(.secondary)
+      } else if network.apps.isEmpty {
         Text("No other apps found on this Mac.").foregroundStyle(.secondary)
       }
       ForEach(network.apps) { node in
-        NodeRow(node: node, network: network)
+        NodeRow(node: node, network: network).disabled(network.usesCenter)
       }
       HStack {
         TextField("Add an app by address", text: $newApp, prompt: Text("http://other-mac.local:47110"))

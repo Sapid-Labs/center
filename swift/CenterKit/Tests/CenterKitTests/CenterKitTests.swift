@@ -131,4 +131,12 @@ final class CenterKitTests: XCTestCase {
     XCTAssertEqual(page.items.first?.data?.original, "Abby")
     n.stop()
   }
+
+  @MainActor
+  func testWithACenterSetTheAppsAreNotWrittenTo() {
+    UserDefaults.standard.removeObject(forKey: "center.url")
+    let net = CenterNetwork(appName: "Test", scopes: ["corrections:write"])
+    XCTAssertFalse(net.usesCenter)
+    XCTAssertTrue(net.nodes(serving: "corrections").isEmpty)
+  }
 }

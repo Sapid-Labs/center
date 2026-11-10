@@ -18,7 +18,8 @@ Every app that speaks the protocol has the same two settings.
 
 1. **Center.** One URL, empty by default. When the URL is set, the app syncs every
    schema it uses with that Center.
-2. **Apps.** A list of other nodes, each with a URL and a token. On a Mac the list fills
+2. **Apps.** A list of other nodes, each with a URL and a token. The app uses this list
+   only while no Center server is set. On a Mac the list fills
    itself: every node advertises itself over Bonjour as `_center._tcp` on the same Mac.
    The person can also add a URL by hand, for example an app on another machine.
 
@@ -26,18 +27,25 @@ Every app that speaks the protocol has the same two settings.
 when some node it is connected to serves the schema behind that feature. For example,
 Clibbits shows "Correct in Herald…" only when a connected node serves `corrections`.
 
-## Writes go to every node that serves the schema
+## The Center server or the apps, never both
 
-When an app makes a record, it gives the record an id and sends
-`PUT /v1/<schema>/<id>` to every connected node that serves the schema. For a correction
-made in Clibbits, those nodes are the Herald Mac app and the Center server, if one is set.
-A node that gets the same record twice keeps one copy, because the id is the same. When
-two copies differ, the copy with the later `updated_at` wins.
+When a Center server is set, an app sends every write to the Center server alone. The
+other apps get the change from the Center server. The app does not write to the other
+apps, even while the Center server is not paired yet or cannot be reached.
 
-A node that owns a schema and has a Center set syncs that schema with the Center:
+When no Center server is set, an app sends each write to every paired app that serves
+the schema. Direct connections between apps are for people who don't run a Center
+server.
 
-- The node pushes its own changes to the Center.
-- The node pulls the changes that other nodes made, with `GET /v1/<schema>?since=`.
+An app gives each new record an id and writes it with `PUT /v1/<schema>/<id>`. A node that
+gets the same record twice keeps one copy, because the id is the same. When a node
+already has a record with the same natural key under another id, the node updates that
+record. When two copies differ, the copy with the later `updated_at` wins.
+
+An app that owns a schema keeps serving it on its own node while a Center server is set,
+for apps that have no Center server set. It sends what it receives to the Center server.
+It pulls the changes other nodes made with `GET /v1/<schema>?since=` each time the
+Center server announces a change.
 
 The Herald phone app reaches the Mac only through a Center server, because a phone cannot
 serve the protocol to a Mac.

@@ -5,6 +5,12 @@ import Network
 /// apps that speak the protocol. Apps on this Mac are found over Bonjour (`_center._tcp`)
 /// with no setup; others can be added by address. A node is used once it is paired.
 ///
+/// THE CENTER OR THE APPS, NEVER BOTH (Joe, 2026-11-10: "A user of the system is probably
+/// going to prefer that their information gets synced to the server if they have it
+/// running ... App connections are for the people that don't have the server"). With a
+/// Center server set, every write goes to it alone, and the other apps hear of it from
+/// the Center. With none set, writes go to the paired apps.
+///
 /// Kept in UserDefaults: `center.url`, `center.apps` (addresses added by hand) and
 /// `center.tokens` (a token per node: `app:<name>` for an app found over Bonjour, so a
 /// port change does not lose it, the address otherwise).
@@ -73,18 +79,24 @@ public final class CenterNetwork: ObservableObject {
     CenterClient(base: node.url, token: token(for: node.id))
   }
 
-  /// Every paired node that serves `schema`: the Center first, then the apps.
+  /// A Center server is set: the apps are not written to, even before it is paired.
+  public var usesCenter: Bool { center != nil }
+
+  /// The nodes a write to `schema` goes to: the Center server once it is paired, or, with
+  /// no Center set, every paired app that serves `schema`.
   public func nodes(serving schema: String) -> [Node] {
-    ([center].compactMap { $0 } + apps).filter { $0.paired && $0.serves(schema) }
+    if let center { return center.paired && center.serves(schema) ? [center] : [] }
+    return apps.filter { $0.paired && $0.serves(schema) }
   }
 
-  /// Nodes that serve `schema` but are not paired yet.
+  /// The nodes a write would go to but which are not paired yet.
   public func unpaired(serving schema: String) -> [Node] {
-    ([center].compactMap { $0 } + apps).filter { !$0.paired && $0.serves(schema) }
+    if let center { return !center.paired && center.serves(schema) ? [center] : [] }
+    return apps.filter { !$0.paired && $0.serves(schema) }
   }
 
-  /// WRITE TO EVERY NODE THAT SERVES THE SCHEMA, by the record's own id, so a node that
-  /// hears of it twice keeps one copy. Returns each node with what went wrong, if anything.
+  /// WRITE TO THE NODES THAT TAKE THE SCHEMA (`nodes(serving:)`), by the record's own id,
+  /// so a node that hears of it twice keeps one copy. Returns each node with what went wrong, if anything.
   /// An unpaired node is asked to pair, and the person approves it in that node's window.
   @discardableResult
   public func write<T: Codable>(_ schema: String, id: String, _ data: T) async -> [(Node, CenterError?)] {
