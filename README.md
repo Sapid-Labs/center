@@ -7,6 +7,10 @@ the Mac and on the phone.
 
 Each person runs their own Center. Center is not a hosted service.
 
+Center is also a protocol. An app can serve the schemas it owns with the same API, so
+apps on one Mac talk to each other directly, with no server running. See
+[docs/protocol.md](docs/protocol.md).
+
 ## How it fits together
 
 - **Each app keeps its own data.** An app works with no Center at all. When the app is
