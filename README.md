@@ -65,6 +65,13 @@ Matching is whole words, case ignored, longest phrase first.
 and `work.applications` (natural key `url`). A token with `work:read` or `work:write`
 covers every `work.*` schema.
 
+## The owner's page
+
+`/` on a Center is its owner's page: sign in with an owner token (`center token me '*'`)
+to approve or deny the apps that ask to connect, see the connected apps and revoke them,
+and see how many records each schema holds. It is one HTML file
+(`server/center/owner.html`) over the `/v1/admin` calls.
+
 ## Running it
 
 ```bash

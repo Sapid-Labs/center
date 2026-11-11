@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from . import VERSION, auth, store
@@ -31,6 +31,17 @@ def about():
     this first to know it is talking to a Center, and which of its features will work."""
     return {"center": NAME, "app": None, "version": VERSION, "api": 1,
             "schemas": {s.name: {"version": s.version, "description": s.description} for s in ALL}}
+
+
+OWNER_PAGE = (__import__("pathlib").Path(__file__).parent / "owner.html")
+
+
+@app.get("/", include_in_schema=False)
+def owner_page():
+    """The owner's page: sign in with the owner token, approve the apps that ask to
+    connect, see and revoke the ones connected. Everything it shows comes from the
+    `/v1/admin` calls, so the page itself holds nothing."""
+    return HTMLResponse(OWNER_PAGE.read_text(), headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/health", include_in_schema=False)
@@ -107,6 +118,12 @@ def admin_approve(pid: str, _=Depends(owner)):
 @app.post("/v1/admin/pairings/{pid}/deny", tags=["admin"])
 def admin_deny(pid: str, _=Depends(owner)):
     return auth.decide(pid, False)
+
+
+@app.get("/v1/admin/summary", tags=["admin"])
+def admin_summary(_=Depends(owner)):
+    """How many live records each schema holds."""
+    return {"center": NAME, "records": {s.name: len(store.live(s.name)) for s in ALL}}
 
 
 @app.get("/v1/admin/tokens", tags=["admin"])

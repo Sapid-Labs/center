@@ -138,3 +138,13 @@ def test_a_browser_may_call(client):
     r = client.options("/v1/corrections", headers={"Origin": "https://relevant.example",
                                                    "Access-Control-Request-Method": "GET"})
     assert r.headers.get("access-control-allow-origin") in ("*", "https://relevant.example")
+
+
+def test_the_owner_page_and_its_summary(client, token):
+    r = client.get("/")
+    assert r.status_code == 200 and "Owner token" in r.text
+    h = token("work:write")
+    client.post("/v1/work.stories", json={"data": {"title": "A"}}, headers=h)
+    assert client.get("/v1/admin/summary", headers=h).status_code == 403
+    s = client.get("/v1/admin/summary", headers=token("*")).json()
+    assert s["records"]["work.stories"] == 1 and s["records"]["corrections"] == 0

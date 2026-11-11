@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Center</title>
+<meta name="color-scheme" content="light dark">
+<style>
+  /* The owner's page (main.py `owner_page`). One column, content first: what waits for
+     the owner on top, then the apps connected, then what the Center holds. */
+  :root {
+    --bg: #f7f8fb; --fg: #1a1c22; --muted: #5b6172; --card: #ffffff; --line: #dfe2ea;
+    --primary: #2f6b4f; --on-primary: #ffffff; --soft: #d9efe2; --on-soft: #0b2a1b;
+    --danger: #b3261e; --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e3e5ea; --muted: #a3a9b6; --card: #181c23; --line: #2a303a;
+      --primary: #8fd4ae; --on-primary: #00391f; --soft: #1d4a33; --on-soft: #c7f0d8; --danger: #ffb4ab;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+           padding: max(10px, env(safe-area-inset-top)) 16px 10px; display: flex; align-items: center; gap: 8px; }
+  header .t { flex: 1; min-width: 0; }
+  h1 { margin: 0; font-size: 1.25rem; line-height: 1.2; overflow-wrap: anywhere; }
+  .sub { margin: 2px 0 0; color: var(--muted); font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  main { max-width: 40rem; margin: 0 auto; padding: 4px 16px max(32px, env(safe-area-inset-bottom)); }
+  h2 { font-size: .875rem; margin: 22px 4px 8px; color: var(--muted); }
+  .card { background: var(--card); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-weight: 700; overflow-wrap: anywhere; }
+  .small { color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+  .code { font: 700 1.5rem/1 ui-monospace, monospace; letter-spacing: .08em; margin: 10px 0; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  button { font: inherit; font-weight: 600; border-radius: 999px; min-height: 40px; padding: 0 18px; cursor: pointer;
+           border: 1px solid var(--line); background: transparent; color: var(--fg); }
+  button.primary { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+  button.danger { color: var(--danger); }
+  button.icon { min-height: 40px; width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; }
+  button:focus-visible, input:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 50%, transparent); outline-offset: 2px; }
+  input { font: inherit; width: 100%; min-height: 44px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+  label { display: block; font-size: .875rem; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+  .empty { color: var(--muted); padding: 4px 4px 0; }
+  .pill { display: inline-block; background: var(--soft); color: var(--on-soft); border-radius: 10px; padding: 2px 8px; font-size: .8rem; font-weight: 600; margin: 4px 4px 0 0; }
+  .err { color: var(--danger); font-size: .875rem; margin-top: 8px; }
+  .signin { max-width: 26rem; margin: 12vh auto 0; padding: 0 16px; }
+  .counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 8px; }
+  .counts .card { margin: 0; }
+  .num { font-size: 1.4rem; font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="signin" class="signin" hidden>
+  <h1 id="signin-title">Center</h1>
+  <p class="small">Sign in with your owner token to approve the apps that ask to connect.</p>
+  <label for="token">Owner token</label>
+  <input id="token" type="password" autocomplete="current-password" placeholder="ctr_…">
+  <div class="actions"><button class="primary" id="go">Sign in</button></div>
+  <p class="err" id="signin-err" hidden></p>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="t"><h1 id="title">Center</h1><p class="sub" id="sub"></p></div>
+    <button class="icon" id="out" title="Sign out" aria-label="Sign out">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
+  </header>
+  <main>
+    <section id="waiting-section" hidden>
+      <h2>Waiting for you</h2>
+      <div id="waiting"></div>
+    </section>
+    <h2>Connected apps</h2>
+    <div id="apps"></div>
+    <h2>What your Center holds</h2>
+    <div class="counts" id="counts"></div>
+  </main>
+</div>
+
+<script>
+  const KEY = 'center.owner';
+  let token = localStorage.getItem(KEY) || '';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+  async function api(path, method = 'GET') {
+    const r = await fetch(path, { method, headers: { Authorization: 'Bearer ' + token } });
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error('That is not this Center’s owner token.'), { auth: true });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || 'The Center answered ' + r.status + '.');
+    return r.json();
+  }
+
+  // What a scope lets an app do, in words.
+  const AREA = { work: 'your work: profile, stories, applications', corrections: 'your transcription corrections' };
+  function scopeWords(sc) {
+    if (sc === '*') return 'Everything (an owner token)';
+    const [name, mode] = sc.split(':');
+    const what = AREA[name] || name.replace('.', ' ');
+    return (mode === 'write' ? 'Read and change ' : 'Read ') + what;
+  }
+  function ago(t) {
+    if (!t) return 'never';
+    const s = Date.now() / 1000 - t;
+    if (s < 90) return 'just now';
+    if (s < 5400) return Math.round(s / 60) + 'm ago';
+    if (s < 129600) return Math.round(s / 3600) + 'h ago';
+    return Math.round(s / 86400) + 'd ago';
+  }
+
+  async function load() {
+    try {
+      const [summary, pairings, tokens] = await Promise.all([api('/v1/admin/summary'), api('/v1/admin/pairings'), api('/v1/admin/tokens')]);
+      $('signin').hidden = true; $('app').hidden = false;
+      $('title').textContent = summary.center; document.title = summary.center;
+      const live = tokens.filter((t) => !t.revoked && !t.scopes.includes('*'));
+      $('sub').textContent = live.length + (live.length === 1 ? ' app connected' : ' apps connected') + (pairings.length ? ' · ' + pairings.length + ' waiting' : '');
+      $('waiting-section').hidden = !pairings.length;
+      $('waiting').innerHTML = pairings.map((p) => `
+        <div class="card">
+          <div class="name">${esc(p.app)} wants to connect</div>
+          <div class="small">${p.scopes.map((s) => esc(scopeWords(s))).join('. ')}.</div>
+          <div class="small" style="margin-top:8px">Allow it only if ${esc(p.app)} shows this code:</div>
+          <div class="code">${esc(p.code)}</div>
+          <div class="actions">
+            <button class="primary" data-approve="${esc(p.id)}">Approve</button>
+            <button data-deny="${esc(p.id)}">Deny</button>
+          </div>
+        </div>`).join('');
+      $('apps').innerHTML = live.length ? live.map((t) => `
+        <div class="card"><div class="row">
+          <div class="grow">
+            <div class="name">${esc(t.name)}</div>
+            <div class="small">Last used ${esc(ago(t.last_used_at))}</div>
+            <div>${t.scopes.map((s) => `<span class="pill">${esc(scopeWords(s))}</span>`).join('')}</div>
+          </div>
+          <button class="danger" data-revoke="${esc(t.id)}" data-name="${esc(t.name)}">Revoke</button>
+        </div></div>`).join('') : '<p class="empty">No apps yet. In an app, enter this Center’s address and press Connect.</p>';
+      $('counts').innerHTML = Object.entries(summary.records).map(([k, n]) => `
+        <div class="card"><div class="num">${n}</div><div class="small">${esc(k.replace('work.', ''))}</div></div>`).join('');
+    } catch (e) {
+      if (e.auth) return signOut(e.message);
+      $('sub').textContent = e.message;
+    }
+  }
+
+  function signOut(message) {
+    token = ''; localStorage.removeItem(KEY);
+    $('app').hidden = true; $('signin').hidden = false;
+    $('signin-err').hidden = !message; $('signin-err').textContent = message || '';
+  }
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    try {
+      if (b.dataset.approve) await api('/v1/admin/pairings/' + b.dataset.approve + '/approve', 'POST');
+      else if (b.dataset.deny) await api('/v1/admin/pairings/' + b.dataset.deny + '/deny', 'POST');
+      else if (b.dataset.revoke) {
+        if (!confirm('Revoke ' + b.dataset.name + '? It will have to connect again.')) return;
+        await api('/v1/admin/tokens/' + b.dataset.revoke, 'DELETE');
+      } else return;
+      load();
+    } catch (err) { alert(err.message); }
+  });
+  $('go').onclick = () => { token = $('token').value.trim(); localStorage.setItem(KEY, token); load(); };
+  $('token').onkeydown = (e) => e.key === 'Enter' && $('go').click();
+  $('out').onclick = () => signOut();
+  // A request is only good for ten minutes: check often while the page is open.
+  setInterval(() => document.visibilityState === 'visible' && token && load(), 3000);
+  fetch('/v1').then((r) => r.json()).then((a) => { $('signin-title').textContent = a.center; document.title = a.center; }).catch(() => {});
+  token ? load() : signOut();
+</script>
+</body>
+</html>
