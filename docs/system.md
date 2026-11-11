@@ -45,7 +45,7 @@ loop runs an agent inside the loop's own folder. The template declares that fold
 layout: the inputs the app provides, and the memory, output and tools that the agent
 keeps. Loopwork's `docs/design.md` ("Loopwork as a server") has the API.
 
-- **Trinkets** is a general app for viewing collected items, and also Joe's hosted
+- **Trinkets** is a general app for viewing collected items, and also a hosted
   Loopwork server.
 - **Relevant** finds jobs with a job template on a Loopwork server. Relevant keeps
   applications and STAR stories in the person's Center.

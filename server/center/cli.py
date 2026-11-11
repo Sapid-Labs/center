@@ -7,6 +7,7 @@ directly, so they need no token and no running server.
   center token <name> <scope>...         make a token by hand, e.g. `center token me '*'`
   center tokens | center revoke <id>     list or revoke tokens
   center export <schema> > file.json     every live record of a schema
+  center update                          a git checkout to the newest release (restart after)
   center import <schema> file.json       records from a list of {id?, data, updated_at?}
 """
 from __future__ import annotations
@@ -48,6 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     elif cmd == "export" and args:
         json.dump(store.live(args[0]), sys.stdout, indent=2)
         print()
+    elif cmd == "update":
+        from . import updates
+        st = updates.status()
+        print(f"on {st['current']}; newest release {(st['latest'] or {}).get('version', 'unknown')}")
+        print(f"now on {updates.run_update()}. Restart the server to use it.")
     elif cmd == "import" and len(args) == 2:
         import uuid
         from .schemas import BY_NAME

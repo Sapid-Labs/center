@@ -4,6 +4,8 @@ WORKDIR /app
 COPY server/ .
 RUN uv sync --no-dev --frozen
 ENV CENTER_DATA=/data
+# Updates come as new images (updates.py), not from inside the container.
+ENV CENTER_INSTALL=docker
 VOLUME /data
 EXPOSE 8110
 CMD ["uv", "run", "--no-dev", "center", "serve", "--port", "8110"]

@@ -126,6 +126,29 @@ def admin_summary(_=Depends(owner)):
     return {"center": NAME, "records": {s.name: len(store.live(s.name)) for s in ALL}}
 
 
+@app.get("/v1/admin/update", tags=["admin"])
+def admin_update_status(_=Depends(owner)):
+    """This version, the newest release, and how this Center updates (updates.py)."""
+    from . import updates
+    return updates.status()
+
+
+@app.post("/v1/admin/update", tags=["admin"])
+def admin_update(_=Depends(owner)):
+    """Update a git checkout to the newest release, then restart: the process exits a
+    moment after answering, and its service manager starts it again on the new code."""
+    from . import updates
+    if updates.how() != "git":
+        raise HTTPException(409, "This Center runs from a Docker image: pull the new image to update it.")
+    try:
+        version = updates.run_update()
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(500, f"The update did not go through: {e}")
+    import threading
+    threading.Timer(1.0, lambda: os._exit(0)).start()
+    return {"updated": version, "restarting": True}
+
+
 @app.get("/v1/admin/tokens", tags=["admin"])
 def admin_tokens(_=Depends(owner)):
     return auth.tokens()

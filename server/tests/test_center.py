@@ -148,3 +148,15 @@ def test_the_owner_page_and_its_summary(client, token):
     assert client.get("/v1/admin/summary", headers=h).status_code == 403
     s = client.get("/v1/admin/summary", headers=token("*")).json()
     assert s["records"]["work.stories"] == 1 and s["records"]["corrections"] == 0
+
+
+def test_update_status_says_what_is_newer(client, token, monkeypatch):
+    from center import updates
+    monkeypatch.setattr(updates, "latest", lambda max_age=3600: {"version": "9.0.0", "notes": "", "url": None})
+    s = client.get("/v1/admin/update", headers=token("*")).json()
+    assert s["available"] is True and s["current"] == "0.2.0"
+    monkeypatch.setattr(updates, "latest", lambda max_age=3600: {"version": "0.2.0", "notes": "", "url": None})
+    assert client.get("/v1/admin/update", headers=token("*")).json()["available"] is False
+    monkeypatch.setenv("CENTER_INSTALL", "docker")
+    assert client.post("/v1/admin/update", headers=token("*")).status_code == 409
+    assert updates.parse("v0.10.0") > updates.parse("0.9.3")

@@ -71,6 +71,14 @@
     </button>
   </header>
   <main>
+    <section id="update-section" hidden>
+      <h2>Update</h2>
+      <div class="card">
+        <div class="name" id="update-title"></div>
+        <div class="small" id="update-body"></div>
+        <div class="actions" id="update-actions"></div>
+      </div>
+    </section>
     <section id="waiting-section" hidden>
       <h2>Waiting for you</h2>
       <div id="waiting"></div>
@@ -148,6 +156,31 @@
     }
   }
 
+  // A newer release (updates.py): asked once a page load, since it asks GitHub.
+  async function checkUpdate() {
+    try {
+      const u = await api('/v1/admin/update');
+      if (!u.available) return;
+      $('update-section').hidden = false;
+      $('update-title').textContent = 'Version ' + u.latest.version + ' is out';
+      $('update-body').textContent = 'This Center runs ' + u.current + '. ' + (u.how === 'docker'
+        ? 'Pull the new image to update it (an auto-updater such as Watchtower does it for you).'
+        : u.how === 'git' ? 'Updating restarts it; apps reconnect on their own.' : 'Install it the way you installed this one.');
+      $('update-actions').innerHTML = (u.how === 'git' ? '<button class="primary" id="do-update">Update</button>' : '') +
+        (u.latest.url ? `<a class="small" href="${esc(u.latest.url)}" target="_blank" rel="noreferrer">What changed</a>` : '');
+      const b = $('do-update');
+      if (b) b.onclick = async () => {
+        b.disabled = true; b.textContent = 'Updating…';
+        try {
+          const r = await api('/v1/admin/update', 'POST');
+          $('update-title').textContent = 'Updated to ' + r.updated + '. Restarting…';
+          $('update-actions').innerHTML = '';
+          setTimeout(() => location.reload(), 6000);
+        } catch (e) { b.disabled = false; b.textContent = 'Update'; alert(e.message); }
+      };
+    } catch (e) { /* no update info: nothing to show */ }
+  }
+
   function signOut(message) {
     token = ''; localStorage.removeItem(KEY);
     $('app').hidden = true; $('signin').hidden = false;
@@ -167,13 +200,13 @@
       load();
     } catch (err) { alert(err.message); }
   });
-  $('go').onclick = () => { token = $('token').value.trim(); localStorage.setItem(KEY, token); load(); };
+  $('go').onclick = () => { token = $('token').value.trim(); localStorage.setItem(KEY, token); load().then(checkUpdate); };
   $('token').onkeydown = (e) => e.key === 'Enter' && $('go').click();
   $('out').onclick = () => signOut();
   // A request is only good for ten minutes: check often while the page is open.
   setInterval(() => document.visibilityState === 'visible' && token && load(), 3000);
   fetch('/v1').then((r) => r.json()).then((a) => { $('signin-title').textContent = a.center; document.title = a.center; }).catch(() => {});
-  token ? load() : signOut();
+  token ? load().then(checkUpdate) : signOut();
 </script>
 </body>
 </html>

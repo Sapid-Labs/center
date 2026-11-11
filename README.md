@@ -78,9 +78,8 @@ and see how many records each schema holds. It is one HTML file
 cd server
 uv sync
 uv run center serve --port 8110      # data in ~/.local/share/center (CENTER_DATA)
-# Joe's: center.service on chonky; over HTTPS on the tailnet only (for web apps):
-# sudo tailscale serve --bg --https=8111 http://127.0.0.1:8110
-#   -> https://chonky.tail5695fc.ts.net:8111
+# A web app needs HTTPS: put Center behind a TLS proxy (Caddy, Cloudflare Tunnel,
+# `tailscale serve --https=8111 http://127.0.0.1:8110`).
 uv run center pairings               # pairing requests that are waiting
 uv run center approve K7Q-2MX        # approve one
 uv run center token me '*'           # an owner token, made by hand
