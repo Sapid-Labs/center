@@ -9,7 +9,8 @@ Each person runs their own Center. Center is not a hosted service.
 
 Center is also a protocol. An app can serve the schemas it owns with the same API, so
 apps on one Mac talk to each other directly, with no server running. See
-[docs/protocol.md](docs/protocol.md).
+[docs/protocol.md](docs/protocol.md). How Center fits with the apps and with services
+such as a Loopwork server is in [docs/system.md](docs/system.md).
 
 ## How it fits together
 
