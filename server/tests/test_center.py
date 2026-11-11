@@ -113,3 +113,28 @@ def test_a_put_with_a_new_id_for_a_known_phrase_updates_the_known_one(client, to
     b = client.put("/v1/corrections/clibbits-1", json={"data": {"original": "abby", "correction": "Abbie"}}, headers=h).json()
     assert b["id"] == a["id"] and b["data"]["correction"] == "Abbie"
     assert len(client.get("/v1/corrections", headers=h).json()["items"]) == 1
+
+
+def test_an_area_scope_covers_its_schemas(client, token):
+    h = token("work:write")
+    r = client.post("/v1/work.stories", json={"data": {"title": "Led a migration", "situation": "Old stack",
+                                                      "action": "Planned it", "result": "Done in 6 weeks"}}, headers=h)
+    assert r.status_code == 200 and r.json()["data"]["title"] == "Led a migration"
+    assert client.get("/v1/work.applications", headers=token("work:read")).status_code == 200
+    assert client.get("/v1/corrections", headers=h).status_code == 403
+    assert client.post("/v1/pair", json={"app": "Relevant", "scopes": ["work:write"]}).status_code == 200
+
+
+def test_an_application_is_one_per_posting(client, token):
+    h = token("work.applications:write")
+    body = {"company": "Acme", "title": "Engineer", "url": "https://acme.example/jobs/1"}
+    a = client.post("/v1/work.applications", json={"data": body}, headers=h).json()
+    b = client.post("/v1/work.applications", json={"data": dict(body, status="interviewing")}, headers=h).json()
+    assert a["id"] == b["id"] and b["data"]["status"] == "interviewing"
+    assert client.post("/v1/work.applications", json={"data": dict(body, status="hired")}, headers=h).status_code == 422
+
+
+def test_a_browser_may_call(client):
+    r = client.options("/v1/corrections", headers={"Origin": "https://relevant.example",
+                                                   "Access-Control-Request-Method": "GET"})
+    assert r.headers.get("access-control-allow-origin") in ("*", "https://relevant.example")

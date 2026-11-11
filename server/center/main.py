@@ -6,6 +6,7 @@ import os
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,9 @@ app = FastAPI(title="Center", version=VERSION,
               description="One private server that the apps you run share data through.")
 for s in ALL:
     app.include_router(s.routes)
+# A web app (Relevant) calls from its own origin. Tokens go in a header, never a cookie,
+# so any origin may.
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 NAME = os.environ.get("CENTER_NAME", "Center")
 
@@ -42,9 +46,10 @@ class PairIn(BaseModel):
 
 @app.post("/v1/pair", tags=["pairing"])
 def pair(body: PairIn):
+    areas = {n.split(".")[0] for n in BY_NAME if "." in n}
     for sc in body.scopes:
         schema, _, mode = sc.partition(":")
-        if schema not in BY_NAME or mode not in ("read", "write"):
+        if (schema not in BY_NAME and schema not in areas) or mode not in ("read", "write"):
             raise HTTPException(400, f"Center has no scope {sc!r}.")
     return auth.start_pairing(body.app.strip(), body.scopes)
 

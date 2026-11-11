@@ -59,12 +59,21 @@ writes, and `correction` is what was said. The natural key is `original`, case i
 Matching is whole words, case ignored, longest phrase first.
 `POST /v1/corrections/apply` `{text}` applies the corrections on the server.
 
+### work (Relevant's)
+
+`work.profile` (one record, id `me`), `work.experiences`, `work.stories` (STAR answers)
+and `work.applications` (natural key `url`). A token with `work:read` or `work:write`
+covers every `work.*` schema.
+
 ## Running it
 
 ```bash
 cd server
 uv sync
 uv run center serve --port 8110      # data in ~/.local/share/center (CENTER_DATA)
+# Joe's: center.service on chonky; over HTTPS on the tailnet only (for web apps):
+# sudo tailscale serve --bg --https=8111 http://127.0.0.1:8110
+#   -> https://chonky.tail5695fc.ts.net:8111
 uv run center pairings               # pairing requests that are waiting
 uv run center approve K7Q-2MX        # approve one
 uv run center token me '*'           # an owner token, made by hand

@@ -53,10 +53,13 @@ def revoke(tid: str) -> bool:
 
 
 def allows(scopes: list[str], need: str) -> bool:
+    """`<schema>:read|write`, write covering read; an area's scope (`work:write`) covers
+    each of its schemas (`work.stories`)."""
     if "*" in scopes or need in scopes:
         return True
     schema, _, mode = need.partition(":")
-    return mode == "read" and f"{schema}:write" in scopes
+    names = [schema] + ([schema.split(".")[0]] if "." in schema else [])
+    return any(f"{n}:{mode}" in scopes or (mode == "read" and f"{n}:write" in scopes) for n in names)
 
 
 def caller(request: Request) -> dict:
