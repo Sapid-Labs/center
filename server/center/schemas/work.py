@@ -51,6 +51,7 @@ class Story(BaseModel):
     task: str = Field("", max_length=4000)
     action: str = Field("", max_length=8000)
     result: str = Field("", max_length=4000)
+    lesson: str = Field("", max_length=4000, description="what they took from it")
     skills: list[str] = Field(default_factory=list, max_length=50)
     tags: list[str] = Field(default_factory=list, max_length=50)
     experience_id: Optional[str] = Field(None, max_length=120)
